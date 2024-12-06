@@ -3,11 +3,20 @@
 #include "raymath.h"
 #include <stdbool.h>
 
-#define SCREEN_WIDTH 800
-#define SCREEN_HEIGTH 600
+#define SCREEN_WIDTH (800)
+#define SCREEN_HEIGTH (600)
 
-#define PLAYER_X 50
-#define PLAYER_Y 500
+#define PLAYER_X (50)
+#define PLAYER_Y (500)
+
+#define MAX_ENEMY (4)
+
+
+typedef struct Enemy {
+
+    Vector2 pos;
+    Vector2 size;
+}Enemy;
 
 
 typedef struct GameState
@@ -17,13 +26,16 @@ typedef struct GameState
     float playerVelocity;
     bool playerOnGround;
 
-
-    Vector2 enemyPos;
-    Vector2 enemySize;
-
     float gravity;
     float spaceTime;
-    int linePos;
+    float gameTime;
+
+
+    int enemyCounter;
+    float spawnTime;
+    Enemy enemies[MAX_ENEMY];
+    
+
 
 }GameState;
 
@@ -38,8 +50,6 @@ int main(void)
         .playerPos = {PLAYER_X, PLAYER_Y},
         .playerSize = {40, 40},
         .gravity = 1000.0f,
-        .enemySize = {20, 60},
-        .linePos = 0
         
     };
 
@@ -52,7 +62,12 @@ int main(void)
 
     while (!WindowShouldClose())
     {
+        BeginDrawing();
+        BeginMode2D(camera);
+        ClearBackground(GRAY);
 
+
+        gameState.gameTime += GetFrameTime();
 
         // Update player
         {
@@ -82,10 +97,12 @@ int main(void)
                 gameState.playerOnGround = false;
             }
 
-
-
+            gameState.playerPos.x += 400 * GetFrameTime();
+            DrawRectangleV(gameState.playerPos, gameState.playerSize, RED);
         }
 
+
+        // Camera
         {
             camera.target = (Vector2){ gameState.playerPos.x + 350 ,300};
 
@@ -93,37 +110,73 @@ int main(void)
 
 
 
-        // Enemies
+        // Update Enemies
         {
-            gameState.enemyPos.x = GetRandomValue(gameState.playerPos.x + 100, gameState.playerPos.x + SCREEN_WIDTH);
+           
+            const float spawnFrequency = 0.1;
+            gameState.spawnTime += GetFrameTime();
+
+            while (gameState.spawnTime >= spawnFrequency) {
+
+                if (gameState.enemyCounter >= MAX_ENEMY) {
+                    break;
+                }
+
+                int randomValue = GetRandomValue(0, 2);
+                Vector2 size;
 
 
+                switch (randomValue) 
+                {
+
+                    case 0:
+                        size = (Vector2) { 60, 10 };
+                        break;
+                    
+                    case 1:
+                        size = (Vector2){ 80, 80 };
+                        break;
+
+                    case 2:
+                        size = (Vector2){ 40, 40 };
+                        break;
+
+                }
+
+
+
+                Vector2 pos = { GetRandomValue(SCREEN_WIDTH, SCREEN_WIDTH + gameState.playerSize.x), 500 };
+                //Vector2 size = { GetRandomValue(20,50), GetRandomValue(10,30) };
+
+                Enemy enemy = {
+
+                    .pos = pos,
+                    .size = size
+                };      
+
+                gameState.enemies[gameState.enemyCounter++] = enemy;
+
+
+                gameState.spawnTime -= spawnFrequency;
+            }
+
+            
 
         }
-
-
-        // Update Line
-        {
-
-            gameState.playerPos.x += 400 * GetFrameTime();
-
-        }
-
-        BeginDrawing();
-        ClearBackground(GRAY);
-        BeginMode2D(camera);
+        
 
         // Draw player
         {
-            DrawRectangleV(gameState.playerPos, gameState.playerSize, RED);
-            DrawLine(gameState.playerPos.x - SCREEN_WIDTH, 540, gameState.playerPos.x + SCREEN_WIDTH, 540, RED);
-            DrawRectangle(1000, 400, 20, 60, BLUE);
 
-            //DrawText(TextFormat("velocity : %f", gameState.playerVelocity), gameState.playerPos.x, gameState.playerPos.y - 20, 20, BLACK);
-            //DrawText(TextFormat("player y : %f", gameState.playerPos.y), gameState.playerPos.x, gameState.playerPos.y - 40, 20, BLACK);
-            //DrawText(TextFormat("holding space : %f", gameState.spaceTime), gameState.playerPos.x, gameState.playerPos.y - 60, 20, BLACK);
-            //DrawText(TextFormat("on ground : %d", gameState.playerOnGround), gameState.playerPos.x, gameState.playerPos.y - 80, 20, BLACK);
+            int  yPosLine = SCREEN_HEIGTH - gameState.playerSize.y - gameState.playerSize.y / 2.0f;
+
+
+            
+            DrawLine(gameState.playerPos.x - SCREEN_WIDTH, yPosLine, gameState.playerPos.x + SCREEN_WIDTH, yPosLine, RED);
+            
         }
+
+
         EndMode2D();
         EndDrawing();
 
