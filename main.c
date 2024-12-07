@@ -9,7 +9,7 @@
 #define PLAYER_X (50)
 #define PLAYER_Y (500)
 
-#define MAX_ENEMY (4)
+#define MAX_ENEMY (5)
 
 
 typedef struct Enemy {
@@ -31,7 +31,8 @@ typedef struct GameState
     float gameTime;
 
 
-    int enemyCounter;
+    int enemyCount;
+    bool enemyCreating;
     float spawnTime;
     Enemy enemies[MAX_ENEMY];
     
@@ -68,6 +69,8 @@ int main(void)
 
 
         gameState.gameTime += GetFrameTime();
+        int maxEnemy = GetRandomValue(1, 2);
+        printf("%d", maxEnemy);
 
         // Update player
         {
@@ -81,10 +84,10 @@ int main(void)
 
             if (IsKeyReleased(KEY_SPACE) && gameState.playerOnGround) {
                 if (gameState.spaceTime > 0.25f) {
-                    gameState.playerVelocity = -600.0f;
+                    gameState.playerVelocity = -500.0f;
                 }
                 else {
-                    gameState.playerVelocity = -500.0f;
+                    gameState.playerVelocity = -400.0f;
                 }
                 gameState.spaceTime = 0.0f;
             }
@@ -97,7 +100,9 @@ int main(void)
                 gameState.playerOnGround = false;
             }
 
-            gameState.playerPos.x += 400 * GetFrameTime();
+            //gameState.playerPos.x += 400 * GetFrameTime();
+            
+            
             DrawRectangleV(gameState.playerPos, gameState.playerSize, RED);
         }
 
@@ -116,37 +121,15 @@ int main(void)
             const float spawnFrequency = 0.1;
             gameState.spawnTime += GetFrameTime();
 
+
             while (gameState.spawnTime >= spawnFrequency) {
 
-                if (gameState.enemyCounter >= MAX_ENEMY) {
+                if (gameState.enemyCount >= MAX_ENEMY) {
                     break;
                 }
 
-                int randomValue = GetRandomValue(0, 2);
-                Vector2 size;
-
-
-                switch (randomValue) 
-                {
-
-                    case 0:
-                        size = (Vector2) { 60, 10 };
-                        break;
-                    
-                    case 1:
-                        size = (Vector2){ 80, 80 };
-                        break;
-
-                    case 2:
-                        size = (Vector2){ 40, 40 };
-                        break;
-
-                }
-
-
-
-                Vector2 pos = { GetRandomValue(SCREEN_WIDTH, SCREEN_WIDTH + gameState.playerSize.x), 500 };
-                //Vector2 size = { GetRandomValue(20,50), GetRandomValue(10,30) };
+                Vector2 pos = { GetRandomValue(SCREEN_WIDTH + gameState.playerPos.x, SCREEN_WIDTH + gameState.playerPos.x + 100), 500 };
+                Vector2 size = { 40, 40 };
 
                 Enemy enemy = {
 
@@ -154,27 +137,62 @@ int main(void)
                     .size = size
                 };      
 
-                gameState.enemies[gameState.enemyCounter++] = enemy;
-
+                gameState.enemies[gameState.enemyCount++] = enemy;
 
                 gameState.spawnTime -= spawnFrequency;
+
+
             }
 
+            int enemiesToSpawn = GetRandomValue(1, MAX_ENEMY);
+
+            for (int enemyId = 0; enemyId < enemiesToSpawn; enemyId++)
+            {
+
+                Enemy* enemy = &gameState.enemies[enemyId];
+
+                DrawRectangleV(enemy->pos, enemy->size, BLUE);
+                enemy->pos.x -= 200 * GetFrameTime();
+
+                if (gameState.enemyCount > enemiesToSpawn) {
+
+                    gameState.enemies[gameState.enemyCount++] = (Enemy){
+
+                        .pos = {500,500},
+                        .size = {40, 40}
+                    };
+
+                }
+                else {
+                    if (gameState.playerPos.x - 100 > enemy->pos.x) {
+                        *enemy = gameState.enemies[--gameState.enemyCount];
+                    }
+                }
+
+
+            }
             
 
+
+         
         }
         
 
-        // Draw player
+        // Draw line
         {
 
             int  yPosLine = SCREEN_HEIGTH - gameState.playerSize.y - gameState.playerSize.y / 2.0f;
-
-
-            
             DrawLine(gameState.playerPos.x - SCREEN_WIDTH, yPosLine, gameState.playerPos.x + SCREEN_WIDTH, yPosLine, RED);
             
         }
+
+        // Helpfull draw tools
+
+        {
+            DrawText(TextFormat("%f", gameState.playerPos.x), gameState.playerPos.x, gameState.playerPos.y - 20, 20, BLACK);
+
+        }
+
 
 
         EndMode2D();
