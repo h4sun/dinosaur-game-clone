@@ -2,6 +2,7 @@
 #include "raylib.h"
 #include "raymath.h"
 #include <stdbool.h>
+#include <unistd.h>
 
 #define SCREEN_WIDTH (800)
 #define SCREEN_HEIGTH (600)
@@ -29,12 +30,15 @@ typedef struct GameState
     float gravity;
     float spaceTime;
     float gameTime;
-
+    float score;
+    
 
     int enemyCount;
     bool enemyCreating;
     float spawnTime;
+    float enemySpeed;
     Enemy enemies[MAX_ENEMY];
+
     
 
 
@@ -43,6 +47,12 @@ typedef struct GameState
 
 int main(void)
 {
+    
+//    TODO: Update enemy epeed with score
+//    TODO: check collision but convert vector2's to rectangle
+//    TODO: random max enemy
+    
+    sleep(1);
 
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGTH, "Dinosaur Clone");
 
@@ -50,8 +60,8 @@ int main(void)
 
         .playerPos = {PLAYER_X, PLAYER_Y},
         .playerSize = {40, 40},
-        .gravity = 1000.0f,
-        
+        .gravity = 1500.0f,
+        .enemySpeed = 400.0f,
     };
 
     Camera2D camera;
@@ -63,15 +73,16 @@ int main(void)
 
     while (!WindowShouldClose())
     {
+        
         BeginDrawing();
         BeginMode2D(camera);
         ClearBackground(GRAY);
 
 
         gameState.gameTime += GetFrameTime();
-        int maxEnemy = GetRandomValue(1, 2);
-        printf("%d", maxEnemy);
-
+        gameState.score += 0.01;
+        
+        
         // Update player
         {
 
@@ -84,10 +95,10 @@ int main(void)
 
             if (IsKeyReleased(KEY_SPACE) && gameState.playerOnGround) {
                 if (gameState.spaceTime > 0.25f) {
-                    gameState.playerVelocity = -500.0f;
+                    gameState.playerVelocity = -600.0f;
                 }
                 else {
-                    gameState.playerVelocity = -400.0f;
+                    gameState.playerVelocity = -500.0f;
                 }
                 gameState.spaceTime = 0.0f;
             }
@@ -113,12 +124,13 @@ int main(void)
 
         }
 
-
+        const float spawnFrequency = 1;
 
         // Update Enemies
         {
+            
+//            const float spawnFrequency = 1 / gameState.gameTime;
            
-            const float spawnFrequency = 0.1;
             gameState.spawnTime += GetFrameTime();
 
 
@@ -127,53 +139,72 @@ int main(void)
                 if (gameState.enemyCount >= MAX_ENEMY) {
                     break;
                 }
-
+                
+                
+                int sizeOption = GetRandomValue(0, 2);
+                Vector2 size = { 0, 0 };
                 Vector2 pos = { GetRandomValue(SCREEN_WIDTH + gameState.playerPos.x, SCREEN_WIDTH + gameState.playerPos.x + 100), 500 };
-                Vector2 size = { 40, 40 };
-
+            
+                switch (sizeOption) {
+                    
+                    case 0:
+                        size = (Vector2){80, 40};
+                
+                        break;
+                        
+                    case 1:
+                        size = (Vector2){40, 40};
+                        break;
+                    
+                    case 2:
+                        size = (Vector2){40, 40};
+                        pos = (Vector2){ GetRandomValue(SCREEN_WIDTH + gameState.playerPos.x, SCREEN_WIDTH + gameState.playerPos.x + 100), GetRandomValue(450, 350) };
+                        break;
+                }
+            
+                
+                int enemyAddPos = 0;
+                                
                 Enemy enemy = {
 
                     .pos = pos,
                     .size = size
-                };      
+                };
 
+                
+                            
+                enemy.pos.x += enemyAddPos;
+                
+                enemyAddPos = GetRandomValue(enemy.size.x + 100, enemy.size.x + 150);
+                
                 gameState.enemies[gameState.enemyCount++] = enemy;
 
                 gameState.spawnTime -= spawnFrequency;
 
 
             }
+            
+            if ((int)gameState.gameTime % 100 == EPSILON) {
+                gameState.enemySpeed += 1000.0f;
+            }
 
-            int enemiesToSpawn = GetRandomValue(1, MAX_ENEMY);
-
-            for (int enemyId = 0; enemyId < enemiesToSpawn; enemyId++)
+            
+            for (int enemyId = 0; enemyId < MAX_ENEMY; enemyId++)
             {
 
                 Enemy* enemy = &gameState.enemies[enemyId];
 
                 DrawRectangleV(enemy->pos, enemy->size, BLUE);
-                enemy->pos.x -= 200 * GetFrameTime();
-
-                if (gameState.enemyCount > enemiesToSpawn) {
-
-                    gameState.enemies[gameState.enemyCount++] = (Enemy){
-
-                        .pos = {500,500},
-                        .size = {40, 40}
-                    };
-
-                }
-                else {
+                enemy->pos.x -= gameState.enemySpeed * GetFrameTime();
+                
+                if(gameState.enemyCount > 0){
                     if (gameState.playerPos.x - 100 > enemy->pos.x) {
                         *enemy = gameState.enemies[--gameState.enemyCount];
                     }
                 }
-
+                
 
             }
-            
-
-
          
         }
         
@@ -189,7 +220,8 @@ int main(void)
         // Helpfull draw tools
 
         {
-            DrawText(TextFormat("%f", gameState.playerPos.x), gameState.playerPos.x, gameState.playerPos.y - 20, 20, BLACK);
+            DrawText(TextFormat("%f", gameState.score), 100, 0, 20, BLACK);
+            DrawText(TextFormat("%f", spawnFrequency), gameState.playerPos.x, gameState.playerPos.y - 20, 20, BLACK);
 
         }
 
